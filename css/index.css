@@ -16,7 +16,7 @@
 
 @font-face {
   font-family: 'Ballpark';
-  src: local("â˜º"), url("../fonts/Ballpark.ttf") format("truetype");
+  src: local("â˜º"), url("../fonts/ballpark.ttf") format("truetype");
   font-weight: normal;
   font-style: normal; 
 }
