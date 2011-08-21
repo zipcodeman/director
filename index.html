@@ -1,149 +1,168 @@
 <!DOCTYPE html>
-<html>
+<head>
 
-    <head>
-      <title>Sugar Skull Demo</title>
-		  <link rel="stylesheet" href="css/demo.css" type="text/css" media="screen" title="no title" charset="utf-8">
-    </head>
+  <link rel="stylesheet" href="css/index.css" type="text/css" charset="utf-8">
+  <title>SugarSkull Sample</title>
+  
+</head>
 
-    <body>
-			<div id="background">
-				<center>
+<body>
+  <h1>/sugarskull/</h1>
+  <header>
+    <a href="#/motivation">Motivation</a>
+    <a href="#/anatomy/routingtables">Anatomy</a>
+    <a href="#/project">Project</a>
+  </header>
+  <!-- div id="clear" title="clear">&gt;</div -->
+  
+  <a href="http://github.com/hij1nx" id="forkme"><img src="img/forkme.png" alt="Fork me on GitHub"></a>
+  
+  <div id="contentcontainer">
 
-					<h1>Sugar Skull</h1>
-					<h2>Client Side Router</h2>
+  <div id="subnav">
+    
+    <section data-route-0="motivation">
+      <a>a lightweight, full featured but very simple client side router</a>
+    </section>
 
-					<div id="content">
-						<div id="menu">
-							<a href="#about" id="tab1" class="tab selected">About</a>
-							<a href="#how" id="tab2" class="tab">How it works</a>
-							<a href="#why" id="tab3" class="tab">Why</a>
-							<a href="#demoExplanation" id="tab4" class="tab">This Demo</a>
-						</div>
+    <section data-route-0="anatomy">
+      <a href="#/anatomy/routingtables">how to define routing tables</a>
+      <a href="#/anatomy/methods">what methods are supported</a>
+      <a href="https://github.com/hij1nx/SugarSkull/blob/master/README.md">complete docs</a>
+    </section>
 
-						<!-- 
+    <section data-route-0="project">
+      <a href="https://github.com/hij1nxj1nx/SugarSkull">visit project on github</a>
+      <a href="https://github.com/hij1nx/SugarSkull/tarball/master">download tarball</a>
+      <a href="https://github.com/hij1nx/SugarSkull/zipball/master">download zip</a>
+    </section>
 
-							The following anchor tags are used to contain blocks of markup that
-							will be shown or hidden based on the current router-context.
+  </div>
+  
+    <div id="contentarea">
+      <section data-route-0="anatomy">
+        <section data-route-1="routingtables">
 
-						-->
+<div class="codesample"><code><pre>
+  var routes = {
 
-						<div id="about" class="router-context selected">
-							<div class="content">
-								A client side router provides state management. What? A route is a URL. A state is the 
-								active data and appearance of the application. So when the url changes, the router performs some
-								work and then the application mutates, but doesn't have to reload the page. This is especially 
-								great for making web sites feel more responsive, like desktop apps.<br/><br/>
-								
-								SugarSkull uses <b>HTML5 pushState</b> and falls back to older techniques to 
-								support all browsers.
-								<br/><br/>
-								Click <a href="#foobar">here</a> to try to enter a route that does not exist.
-							</div>
-						</div>
-				
-						<div id="how" class="router-context">
-							<div class="content">
-								We divide the url into two parts. First the server-side (everything before the '<span class="red">#</span>'), and then
-								the client-side (everything after the '<span class="red">#</span>'). The second part is called the HashRoute.
-								The hash route looks like this...
-								<br/><br/>
-								<center>
-								<img src="img/hashRoute.png" width="598" height="113" alt="HashRoute">
-								</center>
-								We keep track of what happens to the url, if it changes, we fire off some function(s) that you have specified.
-							</div>
-						</div>
-				
-						<div id="why" class="router-context">
-							<div class="content">
-								<b>Single-page apps</b> reduce unnecessary page-reloads, and enhance the overall user experience with responsiveness. 
-								But with this technique comes many <b>edge cases</b>.
-								<br/><br/>
-								For example, let's say a route want's to show some new content. Content relative only to other routes needs to 
-								hide, but each route's functions shouldn't have to duplicate the code that manages this. What about when leaving 
-								a route or when leaving all routes, you may want to preform some cleanup. etc. etc.
-								<br/><br/>
-								SugarSkull addresses a long list of edge cases with a very simple API.
-								<br/><br/>
-								<b>This demo</b> illustrates how you can build
-								single pages apps quickly and easily.
-							</div>
-						</div>
-						
-						<div id="demoExplanation" class="router-context">
-							<div class="content">
-								<h3>Whats happening in this demo</h3>
-								<ul>
-									<li>bookmark a 'page', go back to it, and see the state restored.</li>
-									<li>route can have many parts <a href=""></a></li>
-								</ul>
-								<h3>Simple Configuration</h3>
-								Configuration is done through an object literal
-								<pre><code>
-var router = SS.router(this, {
+    '/books': {
+      '/authors/[A-Z][a-zA-Z]*': {
+        on: getBook
+      },
+      '/title/:id': {
+        on: getBook
+      }
+      on: getBooks
+    }
+  };
 
-	"#about": { // a RegExp
+  var router = Router(routes).init();
 
-		on: ["about"]
-	},
+</pre></code></div>
 
-	"#how": { // ([a-zA-Z0-9_\-]+)
-		on: ["how"]
-	},
+          <div class="codeexplained">
+            sugarskull has a very flexible routing table.<br/><br/> The routing table is a JSON object that
+            connects full or partial routes with functions.<br/><br/> The keys in the JSON object that start
+            with a forward slash are considered routes. Routes can be complete or broken up into
+            parts and nested. They can be nested as deeply as you would like.<br/><br/> They may contain regular expressions or string replacement `:tokens`
+            anywhere you like.
+          </div>
+        </section>
+        <section data-route-1="methods">
 
-	"#why": {
-		on: ["why"]
-	},
+          <div class="codesample"><code><pre>
+var routerInstance = Router({ ... });</pre></code></div>
 
-	"#demoExplanation": {
-		on: ["demo"]
-	},				
+          <div class="codeexplained">
+            a constructor that can be passed a simple object literal.<br/><br/>
+          </div>
 
-     // there are a few optional methods for convenience, they 
 
-	notfound: {
 
-	  // you can define a function anywhere and refer to it here with its function name or you
-	  // can specify a string that represents a function name which belongs to the hostObject
-	  // (the object that is specified as the first parameter of the router). No other methods are
-	  // fired if this the route is 'not found'.
+          <div class="codesample"><code><pre>
+routerInstance.init();</pre></code></div>
 
-		on: [notFound] 
-	},
+          <div class="codeexplained">
+            once initialized sugarskull will start monitoring the state of the document hash, links that change it will affect the router.
+          </div>
 
-	beforeall: {
-	  on: ["beforeall"]
-	},
 
-	afterall: {
-	  on: ["afterall"]
-	},				
 
-     leaveall: {
-       on: ["leaveall"]
-     }
+          <div class="codesample"><code><pre>
+routerInstance.use({ ... })</pre></code></div>
 
-});
-								</code></pre>
-							</div>
-						</div>
-				
-					</div>
-				</center>
-				
-				<div class=".router-context" id="notfound">
-					The route, <span id="route-name"></span> was requested, but it was not found.
-				</div>
-				
-			</div>
-			
-      <script src="js/lib/SS.js" type="text/javascript" charset="utf-8"></script>
-      <script src="js/demo.js" type="text/javascript" charset="utf-8"></script>			
+          <div class="codeexplained">
+            accepts an object literal of global events, such as functions to get fired on, after or once
+            for every route in the routing table.
+          </div>
 
-			<!-- this is a code highlighter used in the demo, it's not required -->
-			<script src="js/lib/vendor/hi.js"></script>
 
-    </body>
-</html>
 
+          <div class="codesample"><code><pre>
+routerInstance.getRoute([index])</pre></code></div>
+
+          <div class="codeexplained">
+            get the current route. if an index is provided the route will be treated as an array 
+            (delimited by the `/` character), the index of the route will then be returned.
+          </div>
+
+
+
+          <div class="codesample"><code><pre>
+routerInstance.setRoute(...)</pre></code></div>
+
+          <div class="codeexplained">
+            set the current route to a string provided as a parameter. if a numeric index and string 
+            value are provided the route will be treated as an array (delimited by the `/` character), 
+            the index of the route will then be set to the string provided. if two numeric values are
+            provided sections of the route will be removed starting from parameter 1 and ending at
+            parameter 2.
+          </div>
+
+          
+        </section data-route-1="methods">
+        
+      </section data-route-0="anatomy">
+      
+      <section data-route-0="motivation">
+
+<div class="codesample"><code><pre>
+  var routes = {
+
+    '/books': {
+      '/authors/:name': {
+        on: getBook
+      }
+      on: getBooks
+    }
+  };
+
+  var router = Router(routes).init();
+
+</pre></code></div>
+
+        <div class="codeexplained">
+          sometimes you only need a wrench, not the toolbox with a hammer, screwdriver, etc. sugarskull
+          is small. it does one job and does it well.<br/><br/> It's not a framework, its a simple tool
+          easy to add or remove. It promotes centralizing router logic so it's not intertwined throughout 
+          your code.<br/><br/>Sugarskull was intended to replace backbone.js routes and provide a lighter
+          weight, less sinatra-like alternative to sammy.js.
+        </div>
+      </section data-route-0="motivation">
+      <section data-route-0="project">
+        <div id="about">
+          This software is
+          <div class="free">open source</div>
+          please enjoy it and share it with others!
+        </div>
+      </section data-route-0="project">
+    </div>
+    <div id="footer"><a href="http://www.twitter.com/hij1nx">follow me on twitter</a></div>
+  </div>
+
+  <script src="js/lib/vendor/jquery.js" type="text/javascript" charset="utf-8"></script>
+  <script src="js/lib/SS.js" type="text/javascript" charset="utf-8"></script>
+  <script src="js/index.js" type="text/javascript" charset="utf-8"></script>
+
+</body>

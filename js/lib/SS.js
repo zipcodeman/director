@@ -1,274 +1,415 @@
+(function(window, undefined) {
 
-var SS = (typeof SS != 'undefined') ? SS : { // SugarSkull
+  var dloc = document.location;
 
-  version: '0.2.0',
+  window.Router = Router;
+  
+  function Router(routes) {
 
-  router: function() {
+    if(!(this instanceof Router)) return new Router(routes);
 
-    var self = this, 
-        first = false, 
-        hasFirstRoute = false, 
-        hostObject, 
-        routes, 
-        onleave;
+    var self = this; 
 
-    if(arguments.length > 1) { // a hostObject is not required.
-      hostObject = arguments[0];
-      routes = arguments[1];
+    this.routes = routes;
+
+    var add;
+
+    this.recurse = function(value) {
+      if (value === undefined) return recurse;
+      add = (this._recurse = value) === 'forward' ? 'unshift' : 'push';
+    };
+
+    this._recurse = null;
+    this.recurse(null);
+
+    this.resource = null;
+    this.state = {};
+    this.after = [];
+    this.on = [];
+    this.once = [];
+    this.oneach = [];
+    this.aftereach = [];
+    this.notfound = null;
+    this.lastroutevalue = null;
+    this.alreadyrun = false;
+
+    function regify(routes) { // convert all simple param routes to regex
+      for (var key in routes) {
+        regify(routes[key]);
+        if (key.indexOf(':') !== -1) {
+          var newKey = key.replace(/:.*?\/|:.*?$/g, '([a-z0-9-]+)/').slice(0, -1);
+          routes[newKey] = routes[key];
+          delete routes[key];
+        }
+      }
+    }
+
+    regify(this.routes);
+
+    function dispatch(src) {
+      for (var i=0, l = self[src].length; i < l; i++) {
+
+        var listener = self[src][i];
+        var val = listener.val === null ? self.lastroutevalue : listener.val;
+        
+        if (typeof listener.fn === 'string') {
+          listener.fn = self.resource[listener.fn];
+        }
+        
+        if (typeof val === 'string') {
+          val = [val];
+        }
+        
+        if (listener.fn.apply(self.resource || null, val || []) === false) {
+          self[src] = [];
+          return false;
+        }
+        if (listener.val !== null) {
+          self.lastroutevalue = listener.val;
+        }
+      
+      }
+    }
+
+    function parse(routes, path, len, matched) {
+
+      var roughmatch, exactmatch;
+      var route = routes[path];
+
+      if(!route) {
+        for (var r in routes) { // we dont have an exact match, lets explore.
+          if(routes.hasOwnProperty(r)) {
+            exactmatch = path.match(new RegExp('^' + r));
+            roughmatch = path.match(new RegExp('^' + r + '(.*)?'));
+            if(exactmatch && roughmatch) {
+
+              // convert roughmatch to an array of names without `/`s.
+              for (var i = roughmatch.length; i >= 0; i--) {
+                if (roughmatch[i]) {
+                  roughmatch[i] = roughmatch[i].replace(/^\//, '');
+                }
+                else {
+                  roughmatch.splice(i, 1);
+                }
+              }
+
+              var partsCount = exactmatch[0].split('/').length - 1,
+                  _path = roughmatch.slice(exactmatch.length),
+                  _len = len - partsCount,
+                  _matched = matched.concat(exactmatch.slice(1));
+
+              if (exactmatch.length > 1) {
+                route = routes[r];
+              }
+              else {
+                route = routes[exactmatch[0]];
+              }
+
+              if (next(_path, _len, _matched)) return true;
+            }
+          }
+        }
+      } else {
+        _len = len - path.split('/').length + 1;
+      }
+
+      next('/', _len, matched);
+
+      function next(path, len, matched) {
+        if (route) {
+
+          if(typeof path !== 'string') {
+            path = '/' + path.join('/');
+          }
+
+          if (path !== '/') {
+            parse(route, path, len, matched);
+          }
+
+          if (len === 0 || self._recurse) {
+
+            function queue(fn, type) {
+              if(fn && fn[0]) {
+                for (var j = 0, m = fn.length; j < m; j++) {
+                  self[type][add]({ fn: fn[j], val: matched || path });
+                }
+              }
+              else {
+                self[type][add]({ fn: fn, val: matched || path });
+              }
+            };
+
+            if (typeof route === 'function' || route.on) {
+              queue(route.on || route, 'on');
+            }
+
+            if (route.once && !route.once._fired){
+              route.once._fired = true;
+              queue(route.once, 'once');
+            }
+
+            if (route.after){
+              queue(route.after, 'after');
+            }
+
+            return true;
+          }
+        }
+        else {
+          self.noroute(matched);
+        }
+      };
+      return true;
+    }
+
+    function route(event) {
+
+      var loc = dloc.hash.slice(1);
+      var len = loc.split('/').length-1;
+
+      self.after = [];
+
+      if(parse(self.routes, loc, len, [])) {
+        dispatch('on');
+        dispatch('once');
+        dispatch('oneach');
+        self.on = [];
+        self.once = [];
+      }
+
+      dispatch('after');
+      dispatch('aftereach');
+    }
+
+    this.init = function(r) {
+      listener.init(route);
+      if(dloc.hash.length < 1 && r) { 
+        dloc.hash = r; 
+      }
+      if(dloc.hash.length > 0) {
+        route();
+      }
+      return this;
+    };
+
+    this.destroy = function() {
+      listener.destroy(route);
+      return this;
+    };
+
+    return this;
+  }
+
+  Router.prototype.use = function(conf) {
+    
+    for(var item in conf) {
+      if(conf.hasOwnProperty(item)) {
+
+        if(item === 'recurse') {
+          this.recurse(conf[item]);
+          continue;
+        }
+        
+        if(item === 'resource') {
+          this.resource = conf[item];
+          continue;
+        }
+        
+        if(item === 'notfound') {
+          this.notfound = conf[item];
+          continue;
+        }
+
+        var fn = conf[item];
+        var store = null;
+        var type = ({}).toString.call(fn);
+
+        if(item === 'on') { store = 'oneach'; }
+        if(item === 'after') { store = 'aftereach'; }
+
+        if(type.indexOf('Array') !== -1) {
+          for (var i=0, l = fn.length; i < l; i++) {
+            this[store].push({ fn: fn[i], val: null });
+          }
+        }
+        else {
+          this[store].push({ fn: fn, val: null });
+        }
+      }
+    }
+    return this;
+  };
+
+  Router.prototype.noroute = function(routename) {    
+    if(this.notfound) {
+      if(({}).toString.call(this.notfound).indexOf('Array') !== -1) {
+        for (var i=0, l = this.notfound.length; i < l; i++) {
+          this.notfound[i](routename);
+        }
+      }
+      else {
+          this.notfound(routename);
+      }
+    }    
+  };
+
+  Router.prototype.explode = function() {
+    var v = dloc.hash;
+    if(v[1] === '/') { v=v.slice(1); }
+    return v.slice(1, v.length).split("/");
+  };
+
+  Router.prototype.setRoute = function(i, v, val) {
+
+    var url = this.explode();
+
+    if(typeof i === 'number' && typeof v === 'string') {
+      url[i] = v;
+    }
+    else if(typeof val === 'string') {
+      url.splice(i, v, s);
     }
     else {
-      routes = arguments[0];
+      url = [i];
     }
 
-    this.retired = {};
-    this.routes = routes;
-    
-    function explodeHash() {
-      var h = document.location.hash;
-      return h.slice(1, h.length).split("/");
+    listener.setHash(url.join('/'));
+    return url;
+  };
+  
+  Router.prototype.getState = function() {
+    return this.state;
+  };
+  
+  Router.prototype.getRoute = function(v) {
+
+    var ret = v;
+
+    if(typeof v === "number") {
+      ret = this.explode()[v];
     }
-    
-    function execMethods(methods, route) {
-
-      for (var i=0; i < methods.length; i++) {
-
-        if(hostObject && typeof methods[i] == "string") {
-          hostObject[methods[i]].call(hostObject);
-        }
-        else if(typeof methods[i] != "string"){
-          methods[i]();
-        }
-        else {
-          throw new Error("exec: method not found on route '" + route + "'.");
-        }
-        
-      }
+    else if(typeof v === "string"){
+      var h = this.explode();
+      ret = h.indexOf(v);
+    }
+    else {
+      ret = this.explode();
     }
     
-    function execRoute(routes, route) {
+    return ret;
+  };
 
-      if(new RegExp(route).test(window.location.hash) && !self.retired[route]) {
-      
-        if(routes[route].once === true) {
-          self.retired[route] = true;
-        }
-        else if(routes[route].once) {
-          execMethods(routes[route].once, route);
-        }
-      
-        if(routes[route].on) {
-          execMethods(routes[route].on, route);
-        }
-      
-        onleave = routes[route].onleave || null;
-      
-      }
-    }
-    
-    function verifyCurrentRoute() {
-      for(var route in routes) {
-        if (routes.hasOwnProperty && route == window.location.hash) {
-          return true;
-        }
-      }
-      return false;
-    }
-    
-    function eventRoute() {
+  var version = '0.4.0',
+      mode = 'modern',
+      listener = { 
 
-      var routes = self.routes;
-      
-      if(!verifyCurrentRoute() && routes.notfound) {
-        execMethods(routes.notfound.on);
-        return;
-      }
-
-      if(routes.beforeall) {
-        execMethods(routes.beforeall.on); // methods to be fired before every route.
-      }
-
-      if(routes.leaveall && !first) {
-        execMethods(routes.leaveall.on); // methods to be fired when leaving every route.
-      }
-
-      if(self.onleave) {
-        execMethods(self.onleave); // fire the current 'onleave-route' method.
-        self.onleave = null; // only fire it once.
-      }
-
-      for(var route in routes) {
-        if (routes.hasOwnProperty) {
-          execRoute(routes, route);
-        }
-      }
-
-      if(routes.afterall) {
-        execMethods(routes.afterall.on); // methods to be fired after every route.
-      }      
-
-    } 
-
-
-    SS.hashListener.Init(eventRoute); // support for older browsers
-
-    for(var route in routes) {
-      if (routes.hasOwnProperty) {
-        if(routes[route].first) {
-          SS.hashListener.setHash(route);
-          SS.hashListener.check();
-          hasFirstRoute = true;
-          break;
-        }
-      }
-    }
-
-    if(!verifyCurrentRoute() && routes.notfound) {
-      execMethods(routes.notfound.on);
-    }
-    else if(!hasFirstRoute && window.location.hash.length > 0) {
-      SS.hashListener.onHashChanged();
-    }
-
-    first = false;    
-
-    return {
-      
-      getRoute: function(v) {
-
-        // if v == number, returns the value at that index of the hash.
-        // if v == string, returns the index at which it was found.
-        // else returns an array which represents the current hash.
-
-        if(typeof v == "number") {
-          return explodeHash()[v];
-        }
-        else if(typeof v == "string"){
-          var h = explodeHash();
-          return h.indexOf(v);
-        }
-        else {
-          return explodeHash();
-        }
-      },
-
-      setRoute: function(v, qty, val) {
-          
-        var hash = explodeHash();
-        
-        if(typeof v == "string") {
-          hash = [v];
-        }
-        else if(v !== false && qty !== false && val !== false) {
-          hash.splice(v, qty, val);
-        }
-        else if(v !== false && qty !== false) {
-          hash.splice(v, qty);
-        }
-        else {
-          throw new Error("setRoute: not enough args.")
-        }
-        
-        SS.hashListener.setHash(hash.join("/"));
-        return hash;
-                      
-      },
-
-      createRoute: function() {
-
-      },
-
-      removeRoute: function() {
-
-      }
-      
-    };
-    
-  },
-
-  hashListener: { // original concept by Erik Arvidson
-
-    ie: /MSIE/.test(navigator.userAgent),
-    ieSupportBack:  true,
-    hash: document.location.hash,
-    nativeHash: true,
+    hash: dloc.hash,
 
     check:  function () {
-      var h = document.location.hash;
+      var h = dloc.hash;
       if (h != this.hash) {
         this.hash = h;
         this.onHashChanged();
       }
     },
 
-    Init: function (fn) {
-
-      if('onhashchange' in window && 
-          ( document.documentMode === undefined || document.documentMode > 7 )) { 
-        // support for Modern Browsers
-        window.onhashchange = fn;
+    fire: function() {
+      if(mode === 'modern') {
+        window.onhashchange();
       }
       else {
+        this.onHashChanged();
+      }
+    },
 
-        // for IE we need the iframe state trick
-        if (this.ie && this.ieSupportBack) {
-          var frame = document.createElement('iframe');
-          frame.id = 'state-frame';
-          frame.style.display = 'none';
-          document.body.appendChild(frame);
-          this.writeFrame('');
+    init: function (fn) {
+
+      var self = this;
+
+      if(!window.Router.listeners) {
+        window.Router.listeners = [];
+      }
+      
+      function onchange() {
+        for(var i = 0, l = window.Router.listeners.length; i < l; i++) {
+          window.Router.listeners[i]();
         }
+      }
 
-        var self = this;
+      //note IE8 is being counted as 'modern' because it has the hashchange event
+      if('onhashchange' in window && 
+          (document.documentMode === undefined || document.documentMode > 7)) {
+        window.onhashchange = onchange;
+        mode = 'modern';
+      }
+      else { // IE support, based on a concept by Erik Arvidson ...
 
-         // IE
+        var frame = document.createElement('iframe');
+        frame.id = 'state-frame';
+        frame.style.display = 'none';
+        document.body.appendChild(frame);
+        this.writeFrame('');
+
         if ('onpropertychange' in document && 'attachEvent' in document) {
           document.attachEvent('onpropertychange', function () {
-            if (event.propertyName == 'location') {
+            if (event.propertyName === 'location') {
               self.check();
             }
           });
         }
-                   
-        this.onHashChanged = fn;
-        this.nativeHash = false;        
+
+        window.setInterval(function () { self.check(); }, 50);
+        
+        this.onHashChanged = onchange;
+        mode = 'legacy';
       }
 
-      if(!this.nativeHash) {
-        // poll for changes of the hash
-        window.setInterval(function () { self.check(); }, 50);        
+      window.Router.listeners.push(fn);      
+      
+      return mode;
+    },
+
+    destroy: function (fn) {
+      if (!window.Router || !window.Router.listeners) return;
+
+      var listeners = window.Router.listeners;
+
+      for (var i = listeners.length - 1; i >= 0; i--) {
+        if (listeners[i] === fn) {
+          listeners.splice(i, 1);
+        }
       }
     },
 
     setHash: function (s) {
+
       // Mozilla always adds an entry to the history
-      if (this.ie && this.ieSupportBack) {
+      if (mode === 'legacy') {
         this.writeFrame(s);
       }
-      document.location.hash = s;
+      dloc.hash = (s[0] === '/') ? s : '/' + s;
       return this;
     },
 
-    getHash: function () {
-      return document.location.hash;
-    },
-
-    writeFrame: function (s) {
+    writeFrame: function (s) { 
+      // IE support...
       var f = document.getElementById('state-frame');
       var d = f.contentDocument || f.contentWindow.document;
       d.open();
-      d.write("<"+"script>window._hash = '" + s + "'; window.onload = parent.hashListener.syncHash;<\/"+"script>");
+      d.write("<script>_hash = '" + s + "'; onload = parent.listener.syncHash;<script>");
       d.close();
     },
 
-    syncHash: function () {
+    syncHash: function () { 
+      // IE support...
       var s = this._hash;
-      if (s != document.location.hash) {
-        document.location.hash = s;
+      if (s != dloc.hash) {
+        dloc.hash = s;
       }
       return this;
     },
 
     onHashChanged:  function () {}
-  }
-
-};
+  };
+ 
+}(window));
