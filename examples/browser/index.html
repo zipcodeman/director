@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Director browser example</title>
+    <meta name="description" content="Director browser example">
+    <meta name="author" content="Nodejitsu Inc.">
+    <script src="../../build/director-1.0.7.js"></script>
+    <script>
+      var router = new Router().init();
+      router.on('/example/:nr', function (e) {
+        console.log(e);
+      });
+    </script>
+  </head>
+  <body>
+
+  </body>
+</html>
