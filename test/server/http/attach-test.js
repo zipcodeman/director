@@ -38,8 +38,6 @@ function assertMethod (uri, method) {
     "should respond with `this.data` if not head": function (err, res, body) {
       assert.isNull(err);
       assert.equal(res.statusCode, 200);
-      // Why the body needs to be stringified, I don't know.
-      // Someone should look into this.
       if (method !== 'HEAD') {
         assert.deepEqual(body, [1, 2, 3]);
       }
