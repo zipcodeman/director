@@ -34,7 +34,7 @@ function assertNotFound (uri) {
       request({ uri: 'http://localhost:9097/' + uri, 
                 json: true }, this.callback);
     },
-    "should respond with `this.data` if not head": function (err, res, body) {
+    "should respond with what was defined in notfound": function (err, res, body) {
       assert.isNull(err);
       assert.equal(res.statusCode, 404);
       assert.deepEqual(body,{not: "found"});
@@ -42,7 +42,7 @@ function assertNotFound (uri) {
   };
 }
 
-vows.describe('director/server/http/attach').addBatch({
+vows.describe('director/server/http/notfound').addBatch({
   "An instance of director.http.Router": {
     "instantiated with a Routing table": {
       topic: new director.http.Router({}, { notfound: notFound }),
