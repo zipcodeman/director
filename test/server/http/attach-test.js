@@ -12,9 +12,11 @@ var assert = require('assert'),
     request = require('request'),
     director = require('../../../lib/director');
 
-function helloWorld() {
-  this.res.writeHead(200, { 'Content-Type': 'application/json' });
-  this.res.end(JSON.stringify(this.data));
+function hello(what) {
+  return function () {
+    this.res.writeHead(200, { 'Content-Type': 'application/json' });
+    this.res.end(JSON.stringify({d: this.data, w: what.toUpperCase()}));
+  };
 }
 
 function notFound() {
@@ -26,7 +28,7 @@ function createServer (router) {
   return http.createServer(function (req, res) {
     router.dispatch(req, res, function (err) {
       if (err) {
-        res.writeHead(404);
+        res.writeHead(500);
         res.end();
       }
     });
@@ -37,15 +39,29 @@ function assertMethod (uri, method) {
   method = method || "GET";
   return {
     topic: function () {
-      request({ uri: 'http://localhost:9091/' + uri, 
+      request({ uri: 'http://localhost:9098/' + uri, 
                 method: method, json: true }, this.callback);
     },
     "should respond with `this.data` if not head": function (err, res, body) {
       assert.isNull(err);
       assert.equal(res.statusCode, 200);
       if (method !== 'HEAD') {
-        assert.deepEqual(body, [1, 2, 3]);
+        assert.deepEqual(body, {d: [1, 2, 3], w: method});
       }
+    }
+  };
+}
+
+function assertNotFound (uri) {
+  return {
+    topic: function () {
+      request({ uri: 'http://localhost:9098/' + uri, json: true },
+        this.callback);
+    },
+    "should respond with not found": function (err, res, body) {
+      assert.isNull(err);
+      assert.equal(res.statusCode, 404);
+      assert.deepEqual(body, {not: "found"});
     }
   };
 }
@@ -55,14 +71,14 @@ vows.describe('director/server/http/attach').addBatch({
     "instantiated with a Routing table": {
       topic: new director.http.Router({
         '/hello': {
-          get: helloWorld,
-          head: helloWorld,
-          patch: helloWorld
+          get: hello('get'),
+          head: hello('head'),
+          patch: hello('patch')
         },
         '/custom': {
-          on: helloWorld
+          on: hello('on')
         },
-        '*': {
+        '/*': {
           on: notFound
         }
       }),
@@ -71,7 +87,6 @@ vows.describe('director/server/http/attach').addBatch({
         assert.isFunction(router.routes.hello.get);
         assert.isObject(router.routes.custom);
         assert.isFunction(router.routes.custom.on);
-        assert.equal(router.routes.on.toString(), notFound.toString());
       },
       "when passed to an http.Server instance": {
         topic: function (router) {
@@ -80,14 +95,13 @@ vows.describe('director/server/http/attach').addBatch({
           });
 
           var server = createServer(router);
-          server.listen(9091, this.callback);
+          server.listen(9098, this.callback);
         },
-        "a request to hello": assertMethod('hello')//,
-        //"a head request to hello": assertMethod('hello', 'HEAD'),
-        //"a patch request to hello": assertMethod('hello', 'PATCH'),
-        //"a GET request to custom": assertMethod('custom', 'GET'),
-        //"a custom request to custom": assertMethod('custom', 'XYZ'),
-        //"a request to something not found": assertMethod('notreally')
+        "a request to hello": assertMethod('hello'),
+        "a head request to hello": assertMethod('hello', 'HEAD'),
+        "a patch request to hello": assertMethod('hello', 'PATCH'),
+        "a HEAD request to custom": assertMethod('custom', 'HEAD'),
+        "a request to something not found": assertNotFound('notreally')
       }
     }
   }

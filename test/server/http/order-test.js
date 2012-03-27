@@ -13,7 +13,7 @@ var assert = require('assert'),
     director = require('../../../lib/director');
 
 function hello(you) {
-  return function () {
+  return function drive() {
     this.res.writeHead(200, { 'Content-Type': 'text/plain' });
     this.res.end(JSON.stringify({hello: you}));
   };
