@@ -13,7 +13,7 @@ var assert = require('assert'),
     director = require('../../../lib/director');
 
 function helloWorld() {
-  this.res.writeHead(200, { 'Content-Type': 'application/json' })
+  this.res.writeHead(200, { 'Content-Type': 'application/json' });
   this.res.end(JSON.stringify(this.data));
 }
 
@@ -28,10 +28,12 @@ function createServer (router) {
   });
 }
 
-function assertGet (uri) {
+function assertMethod (uri, method) {
+  method = method || "GET";
   return {
     topic: function () {
-      request({ uri: 'http://localhost:9091/' + uri }, this.callback);
+      request({ uri: 'http://localhost:9091/' + uri, method: method },
+        this.callback);
     },
     "should respond with `this.data`": function (err, res, body) {
       assert.isNull(err);
@@ -40,7 +42,7 @@ function assertGet (uri) {
       // Someone should look into this.
       assert.deepEqual(JSON.parse(body), [1, 2, 3]);
     }
-  }
+  };
 }
 
 vows.describe('director/server/http/attach').addBatch({
@@ -64,7 +66,7 @@ vows.describe('director/server/http/attach').addBatch({
           var server = createServer(router);
           server.listen(9091, this.callback);
         },
-        "a request to hello": assertGet('hello'),
+        "a request to hello": assertMethod('hello')
       }
     }
   }
