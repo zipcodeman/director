@@ -1,8 +1,8 @@
 
 
 //
-// Generated on Fri Dec 27 2013 12:02:11 GMT-0500 (EST) by Nodejitsu, Inc (Using Codesurgeon).
-// Version 1.2.2
+// Generated on Tue Mar 18 2014 14:24:32 GMT-0700 (PDT) by Nodejitsu, Inc (Using Codesurgeon).
+// Version 1.2.3
 //
 
 (function (exports) {
@@ -402,12 +402,17 @@ Router.prototype.configure = function(options) {
   for (var i = 0; i < this.methods.length; i++) {
     this._methods[this.methods[i]] = true;
   }
-  this.recurse = options.recurse || this.recurse || false;
-  this.async = options.async || false;
-  this.delimiter = options.delimiter || "/";
-  this.strict = typeof options.strict === "undefined" ? true : options.strict;
-  this.notfound = options.notfound;
-  this.resource = options.resource;
+  for (var key in Router.configure_defaults) {
+    if (typeof options[key] !== "undefined") {
+      this[key] = options[key];
+    } else if (typeof this[key] !== "undefined") {
+      this[key] = this[key];
+    } else {
+      this[key] = Router.configure_defaults[key];
+    }
+  }
+  this.notfound = options.notfound || this.notfound;
+  this.resource = options.resource || this.resource;
   this.history = options.html5history && this.historySupport || false;
   this.run_in_init = this.history === true && options.run_handler_in_init !== false;
   this.every = {
